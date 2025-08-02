@@ -1,0 +1,33 @@
+{
+    "name": "schoolaid/zuma",
+    "description": "Zuma payment platform integration for Laravel",
+    "type": "library",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "SchoolAid\\Zuma\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Hsing-Li Chang",
+            "email": "chang@hsing.li"
+        }
+    ],
+    "require": {
+        "php": "^8.0",
+        "guzzlehttp/guzzle": "^7.0",
+        "illuminate/support": "^8.0|^9.0|^10.0"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "SchoolAid\\Zuma\\ZumaServiceProvider"
+            ],
+            "aliases": {
+                "Zuma": "SchoolAid\\Zuma\\Facades\\Zuma"
+            }
+        }
+    },
+    "minimum-stability": "stable"
+}
