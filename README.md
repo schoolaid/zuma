@@ -55,7 +55,6 @@ if ($response->isSuccess()) {
 // Process payment with token
 $payment = PaymentToken::getInstance(Zuma::getFacadeRoot())
     ->setBody([
-        'user_id' => 123,
         'amount' => 100.50,
         'token' => $token,
         'cvv' => '123'

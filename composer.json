@@ -19,6 +19,15 @@
         "guzzlehttp/guzzle": "^7.0",
         "illuminate/support": "^8.0|^9.0|^10.0"
     },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5|^10.0",
+        "mockery/mockery": "^1.5"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SchoolAid\\Zuma\\Tests\\": "tests/"
+        }
+    },
     "extra": {
         "laravel": {
             "providers": [

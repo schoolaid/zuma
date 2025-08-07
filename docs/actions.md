@@ -108,16 +108,16 @@ $response = PaymentToken::getInstance(Zuma::getFacadeRoot())
 
 | Field | Type | Required | Description | Example |
 |-------|------|----------|-------------|---------|
-| `user_id` | integer | Yes | User identifier | `123` |
 | `amount` | float | Yes | Transaction amount | `100.50` |
 | `token` | string | Yes | Payment instrument token | `"pi_tok_1234567890"` |
 | `cvv` | string | Yes | Card verification value | `"123"` |
+
+**Note**: The user_id is automatically determined from the authentication token.
 
 ### Example Request
 
 ```php
 $paymentData = [
-    'user_id' => 123,
     'amount' => 100.50,
     'token' => 'pi_tok_1234567890',
     'cvv' => '123'

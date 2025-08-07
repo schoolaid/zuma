@@ -17,7 +17,6 @@ class PaymentTokenRequest extends BaseRequest
     protected function getRequiredFields(): array
     {
         return [
-            'user_id',
             'amount',
             'token',
             'cvv'
