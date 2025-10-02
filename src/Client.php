@@ -1,11 +1,10 @@
 <?php
-
 namespace SchoolAid\Zuma;
 
 use Exception;
+use Illuminate\Support\Facades\Cache;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Exception\GuzzleException;
-use Illuminate\Support\Facades\Cache;
 
 class Client
 {
@@ -19,19 +18,19 @@ class Client
 
     public function __construct(string $baseUrl, string $username, string $password)
     {
-        $this->baseUrl = rtrim($baseUrl, '/');
+        $this->baseUrl  = rtrim($baseUrl, '/');
         $this->username = $username;
         $this->password = $password;
         $this->cacheKey = 'zuma_token_' . md5($username);
-        
+
         $this->httpClient = new GuzzleClient([
             'base_uri' => $this->baseUrl,
-            'timeout' => config('zuma.timeout', 30),
-            'verify' => config('zuma.verify_ssl', true),
-            'headers' => [
-                'Accept' => 'application/json',
+            'timeout'  => config('zuma.timeout', 30),
+            'verify'   => config('zuma.verify_ssl', true),
+            'headers'  => [
+                'Accept'       => 'application/json',
                 'Content-Type' => 'application/json',
-            ]
+            ],
         ]);
 
         // Set token TTL from config
@@ -56,10 +55,10 @@ class Client
                 'json' => [
                     'username' => $this->username,
                     'password' => $this->password,
-                ]
+                ],
             ]);
 
-            $data = json_decode($response->getBody()->getContents(), true);
+            $data        = json_decode($response->getBody()->getContents(), true);
             $this->token = $data['token'] ?? null;
 
             if (!$this->token) {
@@ -82,7 +81,7 @@ class Client
         $options = [
             'headers' => [
                 'Authorization' => 'Bearer ' . $this->token,
-            ]
+            ],
         ];
 
         if (!empty($data)) {
@@ -91,16 +90,18 @@ class Client
 
         try {
             $response = $this->httpClient->request($method, $endpoint, $options);
+
             return json_decode($response->getBody()->getContents(), true);
         } catch (GuzzleException $e) {
             $statusCode = $e->getCode();
-            $message = $e->getMessage();
+            $message    = $e->getMessage();
 
             if ($statusCode === 401 && $endpoint !== '/commerce/login') {
                 // Clear cache and re-authenticate
                 Cache::forget($this->cacheKey);
                 $this->token = null;
                 $this->authenticate();
+
                 return $this->request($method, $endpoint, $data);
             }
 
