@@ -18,8 +18,7 @@ class PaymentTokenRequest extends BaseRequest
     {
         return [
             'amount',
-            'token',
-            'cvv'
+            'token'
         ];
     }
 }
