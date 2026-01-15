@@ -30,13 +30,14 @@ abstract class BaseAction
     public function submit(): self
     {
         $this->request->validate();
-        
+
         $this->response = $this->client->request(
             $this->request->getMethod(),
             $this->request->getEndpoint(),
-            $this->request->getData()
+            $this->request->getData(),
+            $this->request->isReversible()
         );
-        
+
         return $this;
     }
 

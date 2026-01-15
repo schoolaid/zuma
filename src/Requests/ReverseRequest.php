@@ -2,13 +2,11 @@
 
 namespace SchoolAid\Zuma\Requests;
 
-class PaymentTokenRequest extends BaseRequest
+class ReverseRequest extends BaseRequest
 {
-    protected bool $reversible = true;
-
     public function getEndpoint(): string
     {
-        return '/commerce/payment/token';
+        return '/commerce/reverse';
     }
 
     public function getMethod(): string
@@ -19,8 +17,7 @@ class PaymentTokenRequest extends BaseRequest
     protected function getRequiredFields(): array
     {
         return [
-            'amount',
-            'token',
+            'transaction_id'
         ];
     }
 }

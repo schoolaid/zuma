@@ -72,7 +72,7 @@ class Client
         }
     }
 
-    public function request(string $method, string $endpoint, array $data = []): array
+    public function request(string $method, string $endpoint, array $data = [], bool $reversible = false): array
     {
         if (!$this->token && $endpoint !== '/commerce/login') {
             $this->authenticate();
@@ -102,10 +102,56 @@ class Client
                 $this->token = null;
                 $this->authenticate();
 
-                return $this->request($method, $endpoint, $data);
+                return $this->request($method, $endpoint, $data, $reversible);
+            }
+
+            // Handle automatic reversal for reversible operations on 5xx errors or timeouts
+            if ($reversible && $this->shouldAttemptReversal($statusCode, $e)) {
+                $this->attemptReversal($data);
             }
 
             throw new Exception("Request failed ({$statusCode}): {$message}");
+        }
+    }
+
+    protected function shouldAttemptReversal(int $statusCode, GuzzleException $e): bool
+    {
+        // Attempt reversal on 5xx errors (server errors) or timeouts
+        if ($statusCode >= 500 && $statusCode < 600) {
+            return true;
+        }
+
+        // Check for timeout errors
+        $message = strtolower($e->getMessage());
+        if (str_contains($message, 'timeout') || str_contains($message, 'timed out')) {
+            return true;
+        }
+
+        // Check for connection errors
+        if (str_contains($message, 'connection') || str_contains($message, 'network')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    protected function attemptReversal(array $originalRequestData): void
+    {
+        // Only attempt reversal if we have a transaction_id from the original request
+        if (!isset($originalRequestData['transaction_id'])) {
+            return;
+        }
+
+        try {
+            // Attempt to reverse the transaction
+            $this->request('POST', '/commerce/reverse', [
+                'transaction_id' => $originalRequestData['transaction_id']
+            ], false); // Don't make reversal itself reversible
+
+            // Log successful reversal (optional - you can add logging here)
+        } catch (Exception) {
+            // Silently catch reversal failures - the original exception will be thrown
+            // You can add logging here if needed
         }
     }
 
