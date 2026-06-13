@@ -49,14 +49,25 @@ PaymentTokenRequest::ALLOWED_INSTALLMENTS // [3, 6, 10, 12, 18, 24]
 
 ## Components
 
+### 0. Shared constant — `BaseRequest::ALLOWED_INSTALLMENTS`
+
+- `public const ALLOWED_INSTALLMENTS = [3, 6, 10, 12, 18, 24];` defined on `BaseRequest`.
+  The six installment counts from the epay catalog (ePayServer v1.0.0.8). Note `9` is
+  **not** accepted on this e-commerce path. Public so consuming apps can drive their UI
+  via `PaymentTokenRequest::ALLOWED_INSTALLMENTS` (inherited).
+
+  **Why on `BaseRequest` and not the trait:** PHP trait constants require PHP **8.2**,
+  but this package declares `"php": "^8.0"`. A normal class constant on `BaseRequest`
+  is inherited by both request classes, keeps a single source of truth (DRY), and works
+  on every supported PHP version. The constant is data, not behavior, so it does not
+  leak installments *logic* into the base class.
+
 ### 1. New trait — `src/Requests/Concerns/ValidatesInstallments.php`
 
-Holds the allowed-values constant and the validation logic so it is shared by the two
-requests that accept `payments`, without touching `BaseRequest` or the other requests.
+Holds the installments validation *logic*, shared by the two requests that accept
+`payments`, without touching the other requests. References the inherited
+`self::ALLOWED_INSTALLMENTS` constant.
 
-- `public const ALLOWED_INSTALLMENTS = [3, 6, 10, 12, 18, 24];`
-  The six installment counts from the epay catalog (ePayServer v1.0.0.8). Note `9` is
-  **not** accepted on this e-commerce path. Public so consuming apps can drive their UI.
 - `protected function validateInstallments(): void` — rules, in order:
   1. `payments` key absent, or value `null` / `''` → no-op (single payment / contado).
   2. Value is not an integer (e.g. `"abc"`, `6.5`) → throw `\InvalidArgumentException`.
