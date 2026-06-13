@@ -91,6 +91,7 @@ Each action has a corresponding Request class that defines its endpoint and requ
 - **PaymentToken** (`POST /commerce/payment/token`): Process payment using a tokenized card
   - Required: `amount`, `token`, `cvv`
   - Optional: `email` (sends payment voucher when provided and payment approved)
+  - Optional: `payments` (integer installments / "cuotas") — allowed: `3, 6, 10, 12, 18, 24`; omitted/`0`/`1` = single payment; any other value throws `\InvalidArgumentException` before the request
   - Response code `00` indicates approval
   - Auto-reversal triggered on HTTP errors/timeouts (not business rejections)
 
@@ -114,6 +115,7 @@ The 3DS endpoint automatically detects flow type based on request fields:
     - Required: `amount`, `token`, `url_commerce`
     - Optional: `email` (sends payment voucher when provided and payment approved)
   - Returns: `reference_id`, `redirect_url`, `access_token`, `transactionId`
+  - Optional: `payments` (integer installments / "cuotas") on the **sale/step-1 request only** — allowed: `3, 6, 10, 12, 18, 24`; omitted/`0`/`1` = single payment. Send the **full** `amount` (do not pre-divide). Offer installments **only for Visa** cards/tokens. Never send `payments` on `/commerce/3ds/continue` — the gateway inherits it from step 1
   - Type Operation 1: Direct approval/rejection without authentication
   - Type Operation 3: Requires user redirect for authentication (codes `00` or `10`)
   - Auto-reversal triggered on HTTP errors/timeouts
@@ -210,6 +212,18 @@ Reversals (0400 message) are automatically attempted when operations fail due to
   - Response codes `00` or `10` indicate authentication needed
   - Redirect user to `redirect_url` for authentication
   - Complete flow with `/commerce/3ds/continue` using `reference_id`
+
+### Installments (Cuotas)
+
+The optional `payments` integer enables installment payments on `POST /commerce/payment/token`
+and `POST /commerce/3ds/sale` (step 1 only). The package validates it client-side before any
+network call:
+- Allowed installment counts: `3, 6, 10, 12, 18, 24` (`BaseRequest::ALLOWED_INSTALLMENTS`).
+- Omitted, `null`, `0`, or `1` mean a single payment (contado) — unchanged behavior.
+- Any other value throws `\InvalidArgumentException` from `validate()` (no transaction created).
+- Installments are a Visa product: the **caller** must restrict cuotas to Visa cards/tokens.
+- Send the **full** amount; the gateway splits it across installments.
+- Never send `payments` on `/commerce/3ds/continue`.
 
 ### Email Voucher
 When `email` is provided and payment is approved (code `00`):
