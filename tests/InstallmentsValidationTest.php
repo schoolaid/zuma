@@ -2,9 +2,19 @@
 
 namespace SchoolAid\Zuma\Tests;
 
+use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
+use GuzzleHttp\Psr7\Response;
+use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
+use Mockery;
 use PHPUnit\Framework\TestCase;
+use SchoolAid\Zuma\Actions\PaymentToken;
+use SchoolAid\Zuma\Client;
 use SchoolAid\Zuma\Requests\PaymentTokenRequest;
+use SchoolAid\Zuma\Requests\ThreeDSContinueRequest;
 use SchoolAid\Zuma\Requests\ThreeDSSaleRequest;
 
 class InstallmentsValidationTest extends TestCase
@@ -104,5 +114,76 @@ class InstallmentsValidationTest extends TestCase
                 $this->assertStringContainsString('3, 6, 10, 12, 18, 24', $e->getMessage());
             }
         }
+    }
+
+    protected function tearDown(): void
+    {
+        Mockery::close();
+        parent::tearDown();
+    }
+
+    public function test_payments_is_sent_in_payment_token_request_body(): void
+    {
+        Cache::shouldReceive('get')->andReturn('mock-token');
+        Cache::shouldReceive('put')->andReturn(true);
+        Cache::shouldReceive('forget')->andReturn(true);
+
+        if (!function_exists('config')) {
+            require_once __DIR__ . '/helpers.php';
+        }
+
+        $history = [];
+        $mock = new MockHandler([
+            new Response(200, [], json_encode([
+                'success'       => true,
+                'code'          => '00',
+                'message'       => 'Transaction approved',
+                'transactionId' => 123,
+            ])),
+        ]);
+        $stack = HandlerStack::create($mock);
+        $stack->push(Middleware::history($history));
+
+        $client = new Client('https://api.example.com', 'test-user', 'test-pass');
+
+        $reflection = new \ReflectionClass(Client::class);
+
+        $httpClientProperty = $reflection->getProperty('httpClient');
+        $httpClientProperty->setAccessible(true);
+        $httpClientProperty->setValue($client, new GuzzleClient([
+            'handler'  => $stack,
+            'base_uri' => 'https://api.example.com',
+        ]));
+
+        $tokenProperty = $reflection->getProperty('token');
+        $tokenProperty->setAccessible(true);
+        $tokenProperty->setValue($client, 'mock-jwt-token');
+
+        PaymentToken::getInstance($client)
+            ->setBody([
+                'amount'   => 1200.00,
+                'token'    => 'pi_tok_123',
+                'cvv'      => '123',
+                'payments' => 6,
+            ])
+            ->submit();
+
+        $this->assertCount(1, $history);
+        $sentBody = json_decode((string) $history[0]['request']->getBody(), true);
+        $this->assertArrayHasKey('payments', $sentBody);
+        $this->assertSame(6, $sentBody['payments']);
+    }
+
+    public function test_three_ds_continue_does_not_reject_payments(): void
+    {
+        $request = (new ThreeDSContinueRequest())->setData([
+            'step'           => 3,
+            'reference_id'   => 'ref_123',
+            'transaction_id' => 456,
+            'payments'       => 999, // unsupported value; continue must NOT validate it
+        ]);
+
+        $request->validate();
+        $this->addToAssertionCount(1);
     }
 }
